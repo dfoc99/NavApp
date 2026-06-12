@@ -4,6 +4,17 @@ let map;
 let polylineLayer;
 let markerLayer;
 
+// -----------------------
+// LINE COLORS
+// -----------------------
+const LINE_COLORS = {
+  "Vermelha": "#e53935",
+  "Verde": "#43a047",
+  "Azul": "#1e88e5",
+  "Amarela": "#fdd835"
+};
+
+// -----------------------
 function initMap() {
   map = L.map("mapid").setView([38.743, -9.12], 13);
 
@@ -12,12 +23,25 @@ function initMap() {
     attribution: "© OpenStreetMap"
   }).addTo(map);
 
+  // -----------------------
+  // PANES (Z-INDEX CONTROL)
+  // -----------------------
+  map.createPane("linesPane");
+  map.getPane("linesPane").style.zIndex = 350;
+
+  map.createPane("markersPane");
+  map.getPane("markersPane").style.zIndex = 650;
+
+  map.createPane("labelsPane");
+  map.getPane("labelsPane").style.zIndex = 700;
+
   polylineLayer = L.layerGroup().addTo(map);
   markerLayer = L.layerGroup().addTo(map);
-
-  setTimeout(() => map.invalidateSize(), 300);
 }
 
+window.onload = initMap;
+
+// -----------------------
 async function findRoute() {
   const query = document.getElementById("query").value;
 
@@ -36,22 +60,10 @@ async function findRoute() {
       return;
     }
 
-    // Build display text
-    let displayText = "";
+    document.getElementById("result").textContent =
+      JSON.stringify(data, null, 2);
 
-    if (data.route_string) {
-      displayText += data.route_string + "\n\n";
-    }
-
-    if (data.arrival_time_human) {
-      displayText += `Arrival time: ${data.arrival_time_human}\n\n`;
-    }
-
-    displayText += JSON.stringify(data, null, 2);
-
-    document.getElementById("result").textContent = displayText;
-
-    renderRoute(data.stations);
+    renderRoute(data.stations, data.segments);
 
   } catch (err) {
     document.getElementById("result").textContent =
@@ -59,52 +71,92 @@ async function findRoute() {
   }
 }
 
-function renderRoute(stations) {
+// -----------------------
+// HELPERS
+// -----------------------
+function formatMinutes(t) {
+  if (t == null) return "";
+  return `${Math.round(t)} min`;
+}
+
+// -----------------------
+// MAP RENDER
+// -----------------------
+function renderRoute(stations, segments) {
   if (!stations || stations.length === 0) return;
 
   polylineLayer.clearLayers();
   markerLayer.clearLayers();
 
-  const coords = stations.map(s => [s.lat, s.lon]);
+  const stationMap = {};
+  stations.forEach(s => stationMap[s.id] = s);
 
   // -----------------------
-  // Markers
+  // MARKERS (station names ALWAYS visible)
   // -----------------------
   stations.forEach((s, i) => {
     let color = "blue";
-
     if (i === 0) color = "green";
     else if (i === stations.length - 1) color = "red";
 
     L.circleMarker([s.lat, s.lon], {
-      radius: 7,
+      radius: 6,
       color,
-      fillColor: color,
       fillOpacity: 0.9
     })
       .addTo(markerLayer)
-      .bindPopup(`${s.name} (${s.id})`);
+      .bindPopup(`<b>${s.name}</b><br>${s.id}`)
+
+      // ALWAYS VISIBLE LABEL (no hover)
+      .bindTooltip(s.name, {
+        permanent: true,
+        direction: "top",
+        offset: [0, -10],
+        className: "station-label"
+      });
   });
 
   // -----------------------
-  // Segmented colored path
+  // SEGMENTS (REAL LINE COLORS + ALWAYS VISIBLE TIME LABELS)
   // -----------------------
-  for (let i = 0; i < coords.length - 1; i++) {
-    let segmentColor = "blue";
+  if (segments && segments.length > 0) {
+    segments.forEach(seg => {
+      const color = LINE_COLORS[seg.line] || "#9e9e9e";
 
-    if (i === 0) segmentColor = "green";
-    else if (i === coords.length - 2) segmentColor = "red";
+      const line = L.polyline(seg.coords, {
+        color,
+        weight: 5,
+        opacity: 0.9
+      }).addTo(polylineLayer);
 
-    L.polyline([coords[i], coords[i + 1]], {
-      color: segmentColor,
-      weight: 5,
-      opacity: 0.85
+      // edge time ALWAYS visible (midpoint label)
+      if (seg.time != null) {
+        const midLat = (seg.coords[0][0] + seg.coords[1][0]) / 2;
+        const midLon = (seg.coords[0][1] + seg.coords[1][1]) / 2;
+
+        L.marker([midLat, midLon], {
+          icon: L.divIcon({
+            className: "edge-label",
+            html: `<div>${formatMinutes(seg.time)}</div>`,
+            iconSize: [60, 20],
+            iconAnchor: [30, 10]
+          })
+        }).addTo(polylineLayer);
+      }
+    });
+  } else {
+    const coords = stations.map(s => [s.lat, s.lon]);
+    const line = L.polyline(seg.coords, {
+    color,
+    weight: 5,
+    opacity: 0.9,
+    pane: "linesPane"
     }).addTo(polylineLayer);
   }
 
-  // Fit map to route
-  const boundsLine = L.polyline(coords);
-  map.fitBounds(boundsLine.getBounds());
+  // -----------------------
+  // FIT MAP
+  // -----------------------
+  const bounds = L.polyline(stations.map(s => [s.lat, s.lon])).getBounds();
+  map.fitBounds(bounds);
 }
-
-window.onload = initMap;

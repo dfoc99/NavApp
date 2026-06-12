@@ -25,22 +25,37 @@ def resolve_station_id(name: str, stations: dict) -> str | None:
             return stop_id
     return None
 
+
 def format_time(seconds: float) -> str:
     total_minutes = int(seconds // 60)
     hours = total_minutes // 60
     minutes = total_minutes % 60
     return f"{hours:02d}:{minutes:02d}"
 
+def compute_segment_times(graph: StationGraph, path: list[str]) -> list[float]:
+    times = []
+
+    for i in range(len(path) - 1):
+        a = path[i]
+        b = path[i + 1]
+
+        edge_data = graph.G.get_edge_data(a, b)
+
+        # adjust this depending on your graph structure
+        if edge_data and "weight" in edge_data:
+            times.append(edge_data["weight"])
+        else:
+            times.append(1)  # fallback
+
+    return times
+
 def format_route_string(stations: list[dict]) -> str:
     if not stations:
         return ""
 
-    # Build station chain
     station_chain = " -> ".join(s["name"] for s in stations)
 
-    # Try to infer line (if all stations share same first line)
     line_candidates = []
-
     for s in stations:
         lines = s.get("lines")
         if lines:
@@ -53,26 +68,60 @@ def format_route_string(stations: list[dict]) -> str:
 
     return f"{station_chain} ({line})"
 
+
 def serialize_route(graph: StationGraph, path: list[str], arrival_time: float):
     stations = []
+    cumulative = 0
 
-    for node_id in path:
+    for i, node_id in enumerate(path):
         node = graph.G.nodes[node_id]
 
-        stations.append(
-            {
-                "id": node_id,
-                "name": node["nome"],
-                "lat": node["lat"],
-                "lon": node["lon"],
-            }
-        )
+        if i > 0:
+            edge = graph.G.get_edge_data(path[i - 1], node_id)
+            cumulative += edge.get("weight", 1) if edge else 1
+
+        stations.append({
+            "id": node_id,
+            "name": node["nome"],
+            "lat": node["lat"],
+            "lon": node["lon"],
+            "lines": node.get("linhas", []),
+            "time_from_start": cumulative
+        })
 
     return {
         "arrival_time": arrival_time,
         "arrival_time_human": format_time(arrival_time),
         "stations": stations,
     }
+
+
+def build_segments(graph: StationGraph, stations: list[dict], path: list[str]):
+    segments = []
+
+    for i in range(len(stations) - 1):
+        a = stations[i]
+        b = stations[i + 1]
+
+        common_lines = set(a.get("lines", [])) & set(b.get("lines", []))
+        line = list(common_lines)[0] if common_lines else "Unknown"
+
+        # get edge time from graph
+        edge_data = graph.G.get_edge_data(path[i], path[i + 1])
+        travel_time = edge_data.get("weight", 1) if edge_data else 1
+
+        segments.append({
+            "from": a["id"],
+            "to": b["id"],
+            "line": line,
+            "time": travel_time,
+            "coords": [
+                [a["lat"], a["lon"]],
+                [b["lat"], b["lon"]],
+            ]
+        })
+
+    return segments
 
 
 # -------------------------
@@ -88,7 +137,7 @@ async def lifespan(app: FastAPI):
     app.state.destinations = fetcher.destinos
 
     def open_browser():
-        time.sleep(1.0)  # wait for server to start
+        time.sleep(1.0)
         webbrowser.open("http://localhost:8000/")
 
     threading.Thread(target=open_browser, daemon=True).start()
@@ -173,8 +222,11 @@ async def route_query(request: Request, body: QueryRequest):
     response["destination_id"] = destination_id
     response["origin"] = graph.G.nodes[origin_id]["nome"]
     response["destination"] = graph.G.nodes[destination_id]["nome"]
+
     response["route_string"] = format_route_string(response["stations"])
-    
+
+    # ✅ IMPORTANT FIX: add real line segments
+    response["segments"] = build_segments(graph, response["stations"], path)
     return response
 
 
@@ -197,13 +249,17 @@ async def route_map(request: Request, origin_id: str, destination_id: str):
 
     return graph.exportar_para_mapa(caminho=path)
 
+
 from fastapi.responses import FileResponse
+
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 
 
 @app.get("/")
 async def index():
     return FileResponse("frontend/index.html")
+
+
 # -------------------------
 # ENTRY POINT
 # -------------------------
