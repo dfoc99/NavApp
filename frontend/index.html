@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Metro Route Finder</title>
+
+  <link rel="stylesheet" href="/frontend/styles.css">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+
+<body>
+
+<h1>Metro Route Finder</h1>
+
+<label>Query</label>
+<input id="query" placeholder="e.g. From Alameda to Oriente" />
+<button onclick="findRoute()">Find Route</button>
+
+<div class="box">
+  <h3>Result</h3>
+  <pre id="result">No data yet</pre>
+</div>
+
+<div class="box">
+  <h3>Route Map</h3>
+  <div id="mapid"></div>
+</div>
+
+<script src="/frontend/app.js"></script>
+
+</body>
+</html>

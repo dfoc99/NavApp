@@ -9,7 +9,8 @@ from pprint import pprint
 
 # Resolve the `config/` folder relative to the project root
 # (two levels up from this file: src/ConfigLoader/ -> src/ -> project root)
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 CONFIG_DIR = _PROJECT_ROOT / "config"
 ENV_FILE_NAME = ".env"
 
@@ -44,7 +45,6 @@ class ConfigLoader:
 
         self._load_env_vars()
         self._load_variables_from_config_files()
-        pprint(vars(self))
 
     # ------------------------------------------------------------------
     # Finds and loads config files
