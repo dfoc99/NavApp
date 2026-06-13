@@ -4,8 +4,9 @@ import 'package:latlong2/latlong.dart';
 
 class MetroMap extends StatelessWidget {
   final Map<String, dynamic>? routeData;
+  final MapController? mapController; // 👈 novo parâmetro
 
-  const MetroMap({super.key, this.routeData});
+  const MetroMap({super.key, this.routeData, this.mapController});
 
   static const lineColors = {
     "Vermelha": Colors.red,
@@ -23,70 +24,68 @@ class MetroMap extends StatelessWidget {
       final stations = routeData!["stations"] as List;
 
       // -------------------
-      // MARKERS (stations)
+      // Estações
       // -------------------
-for (int i = 0; i < stations.length; i++) {
-  final s = stations[i];
+      for (int i = 0; i < stations.length; i++) {
+        final s = stations[i];
 
-  final isStart = i == 0;
-  final isEnd = i == stations.length - 1;
+        final isStart = i == 0;
+        final isEnd = i == stations.length - 1;
 
-  final color = isStart
-      ? Colors.green
-      : isEnd
-          ? Colors.red
-          : Colors.blue;
+        final color = isStart
+            ? Colors.green
+            : isEnd
+                ? Colors.red
+                : Colors.blue;
 
-  markers.add(
-    Marker(
-      point: LatLng(s["lat"], s["lon"]),
-      width: 120,
-      height: 50,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.circle,
-            size: 15,
-            color: color,
-          ),
-
-          const SizedBox(height: 2),
-
-          // 👇 THIS is your permanent label
-          Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 1,
-              ),
+        markers.add(
+          Marker(
+            point: LatLng(s["lat"], s["lon"]),
+            width: 19,
+            height: 19,
+            child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.95),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(width: 2),
+                shape: BoxShape.circle,
+                color:color,
+                border: Border.all(width: 1, color: const Color.fromARGB(255, 68, 68, 68)),
+              ),
+            ),
+          ),
+        );
+          
+        // Marcador da label (deslocada para baixo)
+        markers.add(
+          Marker(
+            point: LatLng(s["lat"], s["lon"]),
+            width: 100,
+            height: 30,
+            alignment: Alignment(1.2, 0.9), // label fica à direita do ponto
+            child: Container(
+              alignment: Alignment.center, 
+              padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.85),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(width: 1, color: const Color.fromARGB(255, 68, 68, 68)),
               ),
               child: Text(
                 s["name"],
-                style: const TextStyle(
-                  fontSize: 15,
-                ),
+                style: const TextStyle(fontSize: 13),
                 textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
+          ),
+        );
+        }
 
       // -------------------
-      // SEGMENTS (lines)
+      // Linhas entre estações
       // -------------------
       final segments = routeData!["segments"] as List?;
-
       if (segments != null) {
         for (final seg in segments) {
           final coords = seg["coords"] as List;
-
           polylines.add(
             Polyline(
               points: coords.map((c) {
@@ -101,6 +100,7 @@ for (int i = 0; i < stations.length; i++) {
     }
 
     return FlutterMap(
+      mapController: mapController,
       options: const MapOptions(
         initialCenter: LatLng(38.743, -9.12),
         initialZoom: 15,

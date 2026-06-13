@@ -18,9 +18,9 @@ const LINE_COLORS = {
 function initMap() {
   map = L.map("mapid").setView([38.743, -9.12], 13);
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
-    attribution: "© OpenStreetMap"
+    attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer noopener">OpenStreetMap</a> contributors'
   }).addTo(map);
 
   // -----------------------
