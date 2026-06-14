@@ -79,9 +79,12 @@ class _RouteScreenState extends State<RouteScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Shortest Path Finder")),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -208,7 +211,13 @@ class _RouteScreenState extends State<RouteScreen>
               ),
             ),
 
-          // Mapa no fim da página (o utilizador faz scroll até ao mapa)
+          // (removido mapa interno para evitar duplicação)
+                ],
+              ),
+            ),
+          ),
+
+          // Mapa sempre fixo no fundo do ecrã
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.58,
             child: MetroMap(
@@ -219,7 +228,6 @@ class _RouteScreenState extends State<RouteScreen>
           ),
         ],
       ),
-    ),
     );
   }
 }
