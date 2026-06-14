@@ -59,14 +59,14 @@ class MetroMap extends StatelessWidget {
             point: LatLng(s["lat"], s["lon"]),
             width: 100,
             height: 30,
-            alignment: Alignment(1.2, 0.9), // label fica à direita do ponto
+            alignment: const Alignment(1.2, 0.9), // label fica à direita do ponto
             child: Container(
               alignment: Alignment.center, 
               padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(width: 1, color: const Color.fromARGB(255, 68, 68, 68)),
+              decoration: const BoxDecoration(
+                color: Color.fromRGBO(255, 255, 255, 0.85),
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+                border: Border.fromBorderSide(BorderSide(width: 1, color: Color.fromARGB(255, 68, 68, 68))),
               ),
               child: Text(
                 s["name"],
