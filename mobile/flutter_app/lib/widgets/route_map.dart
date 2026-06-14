@@ -5,8 +5,9 @@ import 'package:latlong2/latlong.dart';
 class MetroMap extends StatelessWidget {
   final Map<String, dynamic>? routeData;
   final MapController? mapController; // 👈 novo parâmetro
+  final LatLng? userLocation;
 
-  const MetroMap({super.key, this.routeData, this.mapController});
+  const MetroMap({super.key, this.routeData, this.mapController, this.userLocation});
 
   static const lineColors = {
     "Vermelha": Colors.red,
@@ -97,6 +98,22 @@ class MetroMap extends StatelessWidget {
           );
         }
       }
+    }
+
+    // Marcador da localização do utilizador (se disponível)
+    if (userLocation != null) {
+      markers.add(
+        Marker(
+          point: userLocation!,
+          width: 36,
+          height: 36,
+          child: const Icon(
+            Icons.my_location,
+            color: Colors.purple,
+            size: 32,
+          ),
+        ),
+      );
     }
 
     return FlutterMap(

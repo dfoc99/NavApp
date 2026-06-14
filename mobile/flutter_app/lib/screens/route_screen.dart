@@ -22,6 +22,7 @@ class _RouteScreenState extends State<RouteScreen>
   final controller = TextEditingController();
   late final mapController = AnimatedMapController(vsync: this);
   Map<String, dynamic>? route;
+  LatLng? userPosition;
 
   @override
   void initState() {
@@ -39,6 +40,9 @@ class _RouteScreenState extends State<RouteScreen>
 
       if (await Geolocator.isLocationServiceEnabled()) {
         final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+        setState(() {
+          userPosition = LatLng(pos.latitude, pos.longitude);
+        });
         mapController.animateTo(
           dest: LatLng(pos.latitude, pos.longitude),
           zoom: 14.0,
@@ -75,8 +79,9 @@ class _RouteScreenState extends State<RouteScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Shortest Path Finder")),
-      body: Column(
-        children: [
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -131,42 +136,90 @@ class _RouteScreenState extends State<RouteScreen>
                       const SizedBox(height: 6),
                       Text("Duração: ${route!["arrival_time_human"] ?? "-"}", style: const TextStyle(fontSize: 14)),
                       const SizedBox(height: 8),
-                      SizedBox(
-                        height: 60,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: (route!["stations"] as List).length,
-                          itemBuilder: (context, idx) {
-                            final s = (route!["stations"] as List)[idx];
-                            return Container(
-                              margin: const EdgeInsets.only(right: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade300),
+                      // Mostrar apenas segmentos no formato: Origem -> Destino (linha X)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Builder(builder: (context) {
+                          final segs = route!["segments"] as List?;
+                          final stations = route!["stations"] as List;
+
+                          if (segs == null || segs.isEmpty) {
+                            return const Text("(Sem segmentos)");
+                          }
+
+                          // Agrupar segmentos consecutivos pela mesma linha
+                          List<Map<String, String>> groups = [];
+
+                          if (segs.isNotEmpty) {
+                            String currentLine = (segs[0]["line"] ?? "").toString();
+                            String startId = (segs[0]["from"] ?? "").toString();
+                            String endId = (segs[0]["to"] ?? "").toString();
+
+                            for (int i = 1; i < segs.length; i++) {
+                              final s = segs[i];
+                              final line = (s["line"] ?? "").toString();
+                              final from = (s["from"] ?? "").toString();
+                              final to = (s["to"] ?? "").toString();
+
+                              if (line == currentLine) {
+                                // estende o fim do trecho
+                                endId = to;
+                              } else {
+                                groups.add({"line": currentLine, "from": startId, "to": endId});
+                                currentLine = line;
+                                startId = from;
+                                endId = to;
+                              }
+                            }
+
+                            // adiciona o último grupo
+                            groups.add({"line": currentLine, "from": startId, "to": endId});
+                          }
+
+                          String findName(String id) {
+                            try {
+                              final s = stations.firstWhere((st) => st["id"].toString() == id);
+                              return s["name"] ?? id;
+                            } catch (_) {
+                              return id;
+                            }
+                          }
+
+                          final items = groups.map<Widget>((g) {
+                            final fromName = findName(g["from"] ?? "");
+                            final toName = findName(g["to"] ?? "");
+                            final line = g["line"] ?? "--";
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Text(
+                                "$fromName -> $toName ($line)",
+                                style: const TextStyle(fontSize: 14),
                               ),
-                              child: Center(child: Text(s["name"], style: const TextStyle(fontSize: 12))),
                             );
-                          },
-                        ),
-                      )
+                          }).toList();
+
+                          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: items);
+                        }),
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
 
-          // Mapa com tamanho adaptado para mobile
+          // Mapa no fim da página (o utilizador faz scroll até ao mapa)
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.58,
             child: MetroMap(
               routeData: route,
               mapController: mapController.mapController,
+              userLocation: userPosition,
             ),
           ),
         ],
       ),
+    ),
     );
   }
 }
