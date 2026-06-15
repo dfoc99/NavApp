@@ -91,7 +91,7 @@ class _RouteScreenState extends State<RouteScreen>
     final panelHeight = _panelHeight(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Shortest Path Finder")),
+      appBar: AppBar(title: const Text("NavApp")),
       body: Column(
         children: [
           // ── Painel de resultados com altura animada ──────────────────────
@@ -308,13 +308,6 @@ class _RouteScreenState extends State<RouteScreen>
                   height: 24,
                   decoration:
                       BoxDecoration(color: lineColor, shape: BoxShape.circle),
-                  child: Center(
-                    child: Text(line,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12)),
-                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
